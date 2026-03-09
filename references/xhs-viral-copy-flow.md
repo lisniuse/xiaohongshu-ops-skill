@@ -6,7 +6,7 @@
 
 1. 输入爆款笔记 URL
 2. 分析爆款因素（标题/封面/正文/互动）
-3. 参考封面图，用 Nano Banana 2 生成新封面（默认 style-only）
+3. 参考封面图，调用局域网生图服务生成新封面（默认 style-only）
 4. 发布（上传图文、填写标题正文，发布前确认）
 
 ## 1) 输入
@@ -70,6 +70,49 @@
    - 1 条生图 prompt（高文字可读）
 4. 配图：3-6 张图解文案 + 对应 prompt
 5. 话题：5-8 个
+
+## 4.5) 生图服务调用规范
+
+使用局域网生图服务（Z-Image-Turbo）生成封面与配图。
+
+**接口地址：**
+- 内网直连：`http://192.168.31.110:8088/api/generate`
+- 外层网络：`http://192.168.1.212:18088/api/generate`
+
+**调用方式（HTTP POST，JSON body）：**
+```json
+{
+  "prompt": "生图提示词（中英文均可）",
+  "width": 1024,
+  "height": 1024,
+  "steps": 9,
+  "guidance_scale": 0.0
+}
+```
+
+**关键参数说明：**
+- `width` / `height`：自动对齐到 16 的倍数，小红书封面推荐 `1024×1280`（竖版）或 `1024×1024`
+- `steps`：推荐 9，追求质量可调到 15-20
+- `guidance_scale`：0 = 无 CFG（最快）；>1 时负向提示词 `negative_prompt` 生效
+- `seed`：可选，填入可复现相同图片
+
+**返回值：**
+```json
+{
+  "image_base64": "PNG图像的base64编码",
+  "seed": 1234567890,
+  "width": 1024,
+  "height": 1024
+}
+```
+
+将 `image_base64` 解码后保存为 PNG 文件，存入 `/tmp/openclaw/uploads/` 再通过 `browser.upload` 上传。
+
+**确认服务可用：**
+```
+GET http://192.168.31.110:8088/api/health
+```
+返回 `"status": "ready"` 表示模型已加载完成。
 
 ## 5) 发布衔接
 

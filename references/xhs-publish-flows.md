@@ -41,11 +41,11 @@
 - 仅停在「发布」按钮可见处，未点击发布
 
 ### 1.4 图文上传（外部生成封面）
-适用于 Nano Banana / 外部工具先产图，再走图文发布的场景。
+适用于局域网生图服务先产图，再走图文发布的场景。
 
-前置说明（提一句即可）：如未安装生图技能，可先执行 `clawhub install nano-banana-pro`。
+前置说明：调用局域网生图服务（`POST http://192.168.31.110:8088/api/generate`），将返回的 `image_base64` 解码后保存为 PNG 文件到 `/tmp/openclaw/uploads/`。
 
-1. 先确认封面图已生成（推荐 PNG/JPG）
+1. 先确认封面图已生成并存入 `/tmp/openclaw/uploads/`（推荐 PNG/JPG）
 2. 若使用 browser.upload：先将图片复制到 `/tmp/openclaw/uploads`
 3. 进入「上传图文」后优先点击「上传图片」
 4. 上传封面图并确认进入编辑页（可见图片编辑区 + 标题/正文输入框）
