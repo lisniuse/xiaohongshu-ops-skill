@@ -106,7 +106,11 @@
 }
 ```
 
-将 `image_base64` 解码后保存为 PNG 文件，存入 `/tmp/openclaw/uploads/` 再通过 `browser.upload` 上传。
+将 `image_base64` 解码后保存为 PNG 文件到本地任意路径，再通过 HTTP API 上传：
+```bash
+POST /api/upload_file
+{"selector": "input[type='file']", "files": ["/path/to/generated.png"]}
+```
 
 **确认服务可用：**
 ```

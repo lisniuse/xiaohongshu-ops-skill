@@ -5,7 +5,7 @@ description: "End-to-end Xiaohongshu operations including positioning, topic res
 
 # Openclaw 小红书运营技能（通用版）
 
-目标：构建可复用的“小红书运营”流程，让任何账号类型都能复用同一套动作框架。
+目标：构建可复用的"小红书运营"流程，让任何账号类型都能复用同一套动作框架。
 
 ## 适用范围（默认即通用流程）
 
@@ -16,30 +16,42 @@ description: "End-to-end Xiaohongshu operations including positioning, topic res
 - 发布后快速复盘（互动结构、评论回复、热点追踪）
 - Viral Copy 链路（输入 URL，高贴合学习封面/配图、标题、正文并生成可发布近似结构笔记）
 
-将每类账号的行业细节作为“案例模块（case module）”挂载到通用流程中。
+将每类账号的行业细节作为"案例模块（case module）"挂载到通用流程中。
 
 ## 常用术语
 
 - `选题`：可发布、可讨论、可转发的内容切入点
 - `引流钩子`：标题/开头一句用于触发停留与点击
 - `结构化输出`：标题、正文、互动问句、话题、标签五元组
-- `快照`：用于验证页面状态的关键证据快照
+- `快照`：调用 `POST /api/screenshot` 验证页面状态的关键证据
 - `回放`：流程失败后重试或改道执行
 
 ## 0) 启动与环境校验（所有任务都遵循）
 
-执行前先按 `references/xhs-runtime-rules.md` 中“运行规则”执行，优先遵循失败可复用顺序。
+执行前先按 `references/xhs-runtime-rules.md` 中"运行规则"执行，优先遵循失败可复用顺序。
 
-- 固定使用内置浏览器 profile：`openclaw`，出现通道异常先切回后再重试。
-- 以 `evaluate` 为先，关键节点少量 `snapshot`，单步动作最多重试一次。
-- 失败后保留已获结果，切稳健路径并汇报。
+**浏览器控制方式**：所有浏览器操作通过 HTTP API（`xhs_server.py`）完成，服务默认运行在 `http://127.0.0.1:8989`。
+搭建方式与 PM2 持久运行配置见 `references/xhs-server-setup.md`。
+
+**强烈推荐使用 PM2 启动并维持服务持续运行**（自动重启、开机自启、日志管理）：
+```bash
+pm2 start xhs_server.py --interpreter python --name xhs-server -- --user alice
+```
+
+启动后依次执行：
+
+1. `GET /api/status` — 确认服务就绪
+2. `POST /api/eval {"expression": "!!document.querySelector('div.menu-list .popover_text')"}` — 确认登录态
+3. 未登录则执行 `scripts/login_qrcode.py` 或 `scripts/login_phone.py`
+
+每个动作最多重试 1 次；失败先调 `POST /api/screenshot` 截图确认状态，再改稳健路径汇报。
 
 ## 1) 技能默认行为（所有任务都遵循）
 
 - **先读本技能目录下的 `persona.md`**（小红书平台专用人设/语气/发布与回复风格）。所有对外文案（发帖/评论回复/私信话术）都必须遵循。
 - 优先输出可执行的 SOP 而非一次性内容稿
-- 语言优先“能对话”而不是“写报告”：短句、口语、站位明确、可引导评论
-- 所有输出默认保留“可追问点”，用于评论区继续延展
+- 语言优先"能对话"而不是"写报告"：短句、口语、站位明确、可引导评论
+- 所有输出默认保留"可追问点"，用于评论区继续延展
 
 ## 2) 账号定位（可复用）
 
@@ -67,7 +79,7 @@ description: "End-to-end Xiaohongshu operations including positioning, topic res
 
 ### B. 需求侧补充信号（行业/场景）
 
-1. 按主题去主流平台/社媒抓“评论区观点分歧”
+1. 按主题去主流平台/社媒抓"评论区观点分歧"
 2. 抽取支持/反对/中性观点各一组
 3. 输出可发文争论点（争议但可控）
 
@@ -108,16 +120,25 @@ description: "End-to-end Xiaohongshu operations including positioning, topic res
 - 话题（5-8 个）
 - 风险标注（是否剧透 / 引战边界 / 版权风险）
 
-## 5) 通用发布链路（不发稿）
+## 5) 通用发布链路
 
 详细发布执行路径请直接按 `references/xhs-publish-flows.md` 执行，避免重复维护。
 
 发布前必须满足的核心点：
 
-- 账号先登录创作后台，确认页面在 `openclaw` profile 可操作。
+- `GET /api/status` 确认服务就绪，`POST /api/eval` 确认已登录。
 - 明确发布类型（视频 / 图文 / 长文），三要素：封面、标题、正文。
-- 到达“发布”按钮可见处停手，默认不直接点击发布。
-- 若涉及截图确认，优先附件形式发送到飞书，并在用户确认后再发布。
+- 到达"发布"按钮可见处停手，默认不直接点击发布。
+- 若涉及截图确认，调用 `POST /api/screenshot` 获取截图路径，附给用户确认后再发布。
+
+**一键发布脚本**（AI 可直接组装参数调用）：
+```bash
+python scripts/publish.py \
+  --files /path/to/img.png \
+  --title "标题" \
+  --content "正文" \
+  --topics 话题1 话题2 话题3
+```
 
 ## 6) 评论与回复（轻量）
 
@@ -130,14 +151,22 @@ description: "End-to-end Xiaohongshu operations including positioning, topic res
 ## 7) 失败与修复（必须遵循）
 
 - 自动化失败先重试一次（同策略）
-- 仍失败则改道：换到“更稳妥同义路径”
+- 仍失败则：先 `POST /api/screenshot` 截图确认状态，再换稳妥同义路径
+- 服务不可达（连接被拒 / 503）→ `pm2 restart xhs-server` 后重试
 - 不做无效重复动作；保留当前进度可复用，报告一次用户需手动的单一动作
 
-## 8) 通用提取示例（Evaluate）
+## 8) 通用提取示例（Eval）
 
 通用字段提取脚本示例见 `references/xhs-eval-patterns.md`。
 
+通过 HTTP 接口执行：
+```bash
+POST /api/eval
+{"expression": "(() => { /* 你的 JS */ })()"}
+```
+
 ## 9) 具体案例：陪你看剧（保留为特例）
+
 ### 使用方式
 
 本技能主文件保留通用框架；垂直行业经验放在 `examples/` 目录，按内容类型选用：
@@ -154,7 +183,6 @@ description: "End-to-end Xiaohongshu operations including positioning, topic res
 - `examples/<vertical>/<vertical>.md`（推荐）
 - 或 `examples/<vertical>/README.md`
 
-
 - `examples/lifestyle/`（待补充）
 - `examples/cosmetics/`（待补充）
 - `examples/fitness/`（待补充）
@@ -163,16 +191,17 @@ description: "End-to-end Xiaohongshu operations including positioning, topic res
 
 ## 实操经验（持续有效）
 
-- **统一规则：所有浏览器操作一律走内置浏览器 profile=`openclaw`**（除非用户明确要求使用 Chrome 扩展 Relay）。
-- 文字配图是稳定写入口，typed text 直接成为封面文案
-- 发布话题优先用 UI 选题，不建议纯文本粘贴大量 `#话题`
-- `evaluate` 批量改写富文本时，尽量少改版式，避免丢失 topic entity
-- 关键步骤前保留一次快照，可用于复盘与问题定位
-- `发布` 按钮可见 ≠ 发布成功；必须明确标注“到发布页停手”
+- **服务用 PM2 管理**：`pm2 start xhs_server.py --interpreter python --name xhs-server -- --user <名字>`，开机自启保证服务常驻
+- **固定 `--user` 参数**：session 持久化在 `sessions/<名字>/`，重启后无需重新登录
+- 文字配图是稳定写入口，配合 `/api/type` 直接输入封面文案
+- 话题输入：正文末尾换行后每个话题单独 `/api/type` + `"append": true`，再按 Enter 确认
+- `/api/eval` 批量读取页面数据时，尽量用精确选择器减少抓取量
+- 关键步骤前调一次 `POST /api/screenshot`，可用于复盘与问题定位
+- 「发布」按钮可见 ≠ 发布成功；必须明确标注"到发布页停手"
 - 若出现新类型评论节奏问题，优先减少每小时回复密度而非提高频率
 
 ## 运营成熟路径（可选）
 
-- 标题池：按“站队/反问/冲突”各保留 10 条可复用模板
+- 标题池：按"站队/反问/冲突"各保留 10 条可复用模板
 - 话题池：按账号调性建立常用关键词与同义替换列表
 - 复用机制：每次复盘后把可复用表达同步进案例文件
