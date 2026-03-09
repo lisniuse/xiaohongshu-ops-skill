@@ -118,6 +118,31 @@ GET http://192.168.31.110:8088/api/health
 ```
 返回 `"status": "ready"` 表示模型已加载完成。
 
+**获取历史生图记录（异步轮询场景）：**
+```
+GET http://192.168.31.110:8088/api/records
+```
+返回本次服务启动以来所有生图记录的 JSON 数组，可用于异步获取结果：
+```json
+[
+  {
+    "prompt": "提示词",
+    "negative_prompt": null,
+    "image_base64": "PNG图像base64",
+    "seed": 1234567890,
+    "width": 1024,
+    "height": 1024,
+    "steps": 9,
+    "guidance_scale": 0.0,
+    "request_time": 1741234567000,
+    "complete_time": 1741234598000
+  }
+]
+```
+- `request_time` / `complete_time`：毫秒级时间戳，两者之差为生成耗时
+- 按请求顺序升序排列，服务重启后清空
+- 外层网络地址：将 `192.168.31.110:8088` 替换为 `192.168.1.212:18088`
+
 ## 5) 发布衔接
 
 调用发布流程：`references/xhs-publish-flows.md`
